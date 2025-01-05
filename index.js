@@ -28,9 +28,47 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const usersCollection = client.db("bistroDb").collection("users");
     const menuCollection = client.db("bistroDb").collection("menu");
     const reviewCollection = client.db("bistroDb").collection("reviews");
     const cartCollection = client.db("bistroDb").collection("carts");
+
+    // User Collection
+
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      // insert email if user does not exist
+      const query = { email: user.email };
+      const userExist = await usersCollection.findOne(query);
+      if (userExist) {
+        return res.send({ message: "User Already Exist", insertedId: null });
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    //change user role
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = { $set: { role: "admin" } };
+      const result = await usersCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    //delete user
+    app.delete("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    //menu related apis
     app.get("/menu", async (req, res) => {
       const result = await menuCollection.find().toArray();
       res.send(result);
@@ -43,26 +81,26 @@ async function run() {
     // Carts COllection
     app.post("/carts", async (req, res) => {
       const cartItem = req.body;
-    
+
       const result = await cartCollection.insertOne(cartItem);
       res.send(result);
     });
 
     // specific Cart Data Load
-    app.get('/carts', async(req,res)=>{
+    app.get("/carts", async (req, res) => {
       const email = req.query.email;
-      const query = {email:email}
+      const query = { email: email };
       const result = await cartCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
     // Delete Cart Data Load
-    app.delete('/carts/:id',async (req,res)=>{
+    app.delete("/carts/:id", async (req, res) => {
       const id = req.params.id;
-      const query ={_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
